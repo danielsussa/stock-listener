@@ -1,0 +1,19 @@
+{
+    "stocks":{
+        "petr4":{
+            "price":19.60,
+            "ask":19.50,
+            "bid": 19.60
+        }
+    },
+    "options":{
+        "petr4L22":{
+            "parent":"petr4",
+            "expiration_date":"22/11/2018",
+            "strike":22.34,
+            "price":0.78,
+            "ask":0.70,
+            "bid":0.78
+        }
+    }
+}

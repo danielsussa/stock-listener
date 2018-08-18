@@ -1,0 +1,23 @@
+version: '3.5'
+
+services:
+
+  api-core:
+    image: stock-listener:latest
+    command: "script-core.sh"
+    ports:
+    - 8050:8050
+    volumes:
+    - ./api-core:/go/src/github.com/danielsussa/stock-listener/api-core
+    - ./build:/build
+    - ./scripts:/scripts
+    network_mode: "host"
+
+  api-mock:
+    image: stock-listener:latest
+    command: "script-mock.sh"
+    volumes:
+    - ./api-mock:/go/src/github.com/danielsussa/stock-listener/api-mock
+    - ./build:/build
+    - ./scripts:/scripts
+    network_mode: "host"

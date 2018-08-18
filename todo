@@ -1,0 +1,5 @@
+- tpc mock
+- core service 
+ 1- capture tcp service
+ 2- process data
+ 3- send email when get vdx config
