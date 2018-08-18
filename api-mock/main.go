@@ -1,16 +1,24 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"net"
 	"strings" // only needed below for sample processing
 	"time"
 )
 
+func getMessage() []string {
+	msg := make([]string, 0)
+	msg = append(msg, "petr4:313:393")
+	msg = append(msg, "petr4:111:393")
+	return msg
+}
+
 func main() {
 
 	fmt.Println("Launching server...")
+
+	msgs := getMessage()
 
 	// listen on all interfaces
 	ln, _ := net.Listen("tcp", ":8081")
@@ -19,13 +27,10 @@ func main() {
 	conn, _ := ln.Accept()
 
 	// run loop forever (or until ctrl-c)
-	for {
-		// will listen for message to process ending in newline (\n)
-		message, _ := bufio.NewReader(conn).ReadString('\n')
-		// output message received
-		fmt.Print("Message Received:", string(message))
+
+	for _, msg := range msgs {
 		// sample process for string received
-		newmessage := strings.ToUpper(message)
+		newmessage := strings.ToUpper(msg)
 		// send new string back to client
 		conn.Write([]byte(newmessage + "\n"))
 		time.Sleep(2 * time.Second)
