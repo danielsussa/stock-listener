@@ -9,6 +9,8 @@ services:
     - 8050:8050
     volumes:
     - ./api-core:/go/src/github.com/danielsussa/stock-listener/api-core
+    - ./vendor:/go/src/github.com/danielsussa/stock-listener/vendor
+    - ./api-core/assets:/build/assets 
     - ./scripts:/scripts
     network_mode: "host"
 
@@ -17,5 +19,6 @@ services:
     command: "script-mock.sh"
     volumes:
     - ./api-mock:/go/src/github.com/danielsussa/stock-listener/api-mock
+    - ./vendor:/go/src/github.com/danielsussa/stock-listener/vendor
     - ./scripts:/scripts
     network_mode: "host"

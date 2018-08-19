@@ -9,8 +9,8 @@ import (
 
 func getMessage() []string {
 	msg := make([]string, 0)
-	msg = append(msg, "petr4:313:393")
-	msg = append(msg, "petr4:111:393")
+	msg = append(msg, "t:petr4:185859:2:18.69:3:18.65:4:18.69")
+	msg = append(msg, "t:petr4L22:185859:2:0.50:3:0.44:4:0.50")
 	return msg
 }
 
@@ -30,7 +30,7 @@ func main() {
 
 	for _, msg := range msgs {
 		// sample process for string received
-		newmessage := strings.ToUpper(msg)
+		newmessage := strings.ToLower(msg)
 		// send new string back to client
 		conn.Write([]byte(newmessage + "\n"))
 		time.Sleep(2 * time.Second)
