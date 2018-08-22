@@ -35,4 +35,5 @@ func main() {
 		conn.Write([]byte(newmessage + "\n"))
 		time.Sleep(2 * time.Second)
 	}
+
 }

@@ -25,13 +25,13 @@ type stock struct {
 	Expiration    time.Time
 
 	// resource data
-	Price float64 `json:"-"`
-	Ask   float64 `json:"-"`
-	Bid   float64 `json:"-"`
+	Price     float64 `json:"-"`
+	BuyPrice  float64 `json:"-"`
+	SellPrice float64 `json:"-"`
 
 	//stats data
 	_vdx    float64
-	_maxVdx float64
+	_bidVdx float64
 }
 
 func (res *resource) updateStock(msgSpl []string) {
@@ -43,15 +43,15 @@ func (res *resource) updateStock(msgSpl []string) {
 				f, _ := strconv.ParseFloat(msgSpl[i+1], 32)
 				stock.Price = f
 			}
-			//ASK
+			//AKS - Buy Price
 			if msg == "3" {
 				f, _ := strconv.ParseFloat(msgSpl[i+1], 32)
-				stock.Ask = f
+				stock.BuyPrice = f
 			}
-			//BID
+			//BID - Sell Price
 			if msg == "4" {
 				f, _ := strconv.ParseFloat(msgSpl[i+1], 32)
-				stock.Bid = f
+				stock.SellPrice = f
 			}
 		}
 	}
@@ -65,11 +65,10 @@ func (res *resource) calculateVDX(stockName string) {
 		stock := res.Stocks[option.Parent]
 		timeNow := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.UTC)
 		expDif := option.Expiration.Sub(timeNow).Hours() / 24
-		fmt.Println(expDif)
+
+		//calculate vdx
 		vdx := (option.Price / stock.Price) * (120 - expDif) * (option.Strike - stock.Price)
-		maxVdx := (option.Bid / stock.Ask) * (120 - expDif) * (option.Strike - stock.Ask)
 		option._vdx = vdx
-		option._maxVdx = maxVdx
 	}
 	res.Stocks[stockName] = option
 
@@ -94,6 +93,7 @@ func convertFile() (res resource) {
 }
 
 func main() {
+	fmt.Println("Start CORE")
 	res := convertFile()
 
 	// connect to this socket
@@ -104,7 +104,9 @@ func main() {
 	}
 
 	// send to socket
-	fmt.Fprintf(conn, "olaaa\n")
+	fmt.Fprintf(conn, "\n")
+	fmt.Fprintf(conn, "kanczuk\n")
+	fmt.Fprintf(conn, "102030\n")
 
 	for {
 		// listen for reply
@@ -119,3 +121,5 @@ func main() {
 
 	}
 }
+
+func 
