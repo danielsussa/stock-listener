@@ -15,32 +15,100 @@ import (
 	"github.com/labstack/echo"
 )
 
-type stockInfo struct {
+type stockInfo interface {
+	Kind() string
+	SetPrice(string)
+	SetMarketStatus(string)
+	SetName(string)
+	Perform()
+}
+
+type option struct {
 	Price          float64
 	Name           string
-	Parent         string
+	Stock          *stock
 	MinProfit      float64
 	MaxProfit      float64
 	Strike         float64
 	Expiration     float64
 	Volume         float64
+	IsMarketOpen   bool
 	ExpirationDate time.Time
 	Vdx            float64
 }
 
-var stockMap map[string]*stockInfo
+func (opt option) Kind() string {
+	return "option"
+}
+
+func (opt *option) SetPrice(p string) {
+	price, _ := strconv.ParseFloat(p, 32)
+	opt.Price = price
+}
+
+func (opt *option) SetMarketStatus(p string) {
+	if p == "0" {
+		opt.IsMarketOpen = true
+	}
+	opt.IsMarketOpen = false
+}
+
+func (opt *option) SetName(p string) {
+	opt.Name = p
+}
+
+func (opt *option) Perform() {
+	//Perform VDX
+	if opt.Stock == nil {
+		return
+	}
+	opt.Vdx = (opt.Price / opt.Stock.Price) * (120 - opt.Expiration) * (opt.Strike - opt.Stock.Price)
+
+	// 	option.MinProfit = option.Price / stock.Price
+	// 	option.MaxProfit = (option.Strike + option.Price - stock.Price) / stock.Price
+	opt.MinProfit = opt.Price / opt.Stock.Price
+	opt.MaxProfit = (opt.Strike + opt.Price - opt.Stock.Price) / opt.Stock.Price
+}
+
+type stock struct {
+	Price  float64
+	Name   string
+	Volume float64
+}
+
+func (st stock) Kind() string {
+	return "stock"
+}
+
+func (st *stock) SetPrice(p string) {
+	price, _ := strconv.ParseFloat(p, 32)
+	st.Price = price
+}
+
+func (st *stock) SetMarketStatus(p string) {
+
+}
+
+func (st *stock) SetName(p string) {
+	st.Name = p
+}
+
+func (st *stock) Perform() {
+}
+
+var stockMap map[string]stockInfo
 var msgList []string
 
 func main() {
 	stocks, options := convertFile()
 
 	//Add to stockMap
-	stockMap = make(map[string]*stockInfo)
-	for _, stock := range stocks {
-		stockMap[strings.ToUpper(stock)] = &stockInfo{}
+	stockMap = make(map[string]stockInfo)
+	for _, st := range stocks {
+		stockMap[strings.ToUpper(st)] = &stock{}
 	}
-	for _, option := range options {
-		stockMap[strings.ToUpper(option)] = &stockInfo{}
+	for _, opt := range options {
+		stockMap[strings.ToUpper(opt)] = &option{}
 	}
 
 	// connect to this socket
@@ -56,7 +124,6 @@ func main() {
 	fmt.Fprintf(conn, "102030\n")
 
 	go sendAllMessages(&conn, stocks, options)
-	go saveMsgToFile()
 	go serveWeb()
 
 	for {
@@ -64,6 +131,8 @@ func main() {
 		message, _ := bufio.NewReader(conn).ReadString('\n')
 
 		msgSpl := strings.Split(message, ":")
+		saveMsgToFile()
+
 		if len(msgSpl) < 3 || msgSpl[0] == "E" {
 			continue
 		}
@@ -76,31 +145,43 @@ func main() {
 
 		msgMap := transformMsgIntoMap(msgSpl)
 
+		//Setup name
+		stockMap[msgMap["name"]].SetName(msgMap["name"])
+
 		if _, ok := msgMap["45"]; ok {
 			//If is a option
 			if msgMap["45"] == "2" {
 				if _, ok := msgMap["81"]; ok {
-					stockMap[msgMap["name"]].Parent = msgMap["81"]
+					st := stockMap[msgMap["81"]].(*stock)
+					stockMap[msgMap["name"]].(*option).Stock = st
 				}
 			}
 		}
 
 		//Setup price
 		if _, ok := msgMap["2"]; ok {
-			price, _ := strconv.ParseFloat(msgMap["2"], 32)
-			stockMap[msgMap["name"]].Price = price
+			stockMap[msgMap["name"]].SetPrice(msgMap["2"])
+		}
+
+		//Setup Market Status
+		if _, ok := msgMap["84"]; ok {
+			stockMap[msgMap["name"]].SetMarketStatus(msgMap["84"])
 		}
 
 		//Setup strike
 		if _, ok := msgMap["121"]; ok {
 			strike, _ := strconv.ParseFloat(msgMap["121"], 32)
-			stockMap[msgMap["name"]].Strike = strike
+			if stockMap[msgMap["name"]].Kind() == "option" {
+				stockMap[msgMap["name"]].(*option).Strike = strike
+			}
 		}
 
 		//Setup volume
 		if _, ok := msgMap["9"]; ok {
 			vol, _ := strconv.ParseFloat(msgMap["9"], 32)
-			stockMap[msgMap["name"]].Volume = vol
+			if stockMap[msgMap["name"]].Kind() == "option" {
+				stockMap[msgMap["name"]].(*option).Volume = vol
+			}
 		}
 
 		//Setup Expiration date
@@ -108,23 +189,12 @@ func main() {
 			tExp, _ := time.Parse("2006-01-02", fmt.Sprintf("%s-%s-%s", msgMap["125"][0:4], msgMap["125"][4:6], msgMap["125"][6:8]))
 			tNow := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.UTC)
 
-			stockMap[msgMap["name"]].Expiration = tExp.Sub(tNow).Hours() / 24
-			stockMap[msgMap["name"]].ExpirationDate = tExp
+			if stockMap[msgMap["name"]].Kind() == "option" {
+				stockMap[msgMap["name"]].(*option).Expiration = tExp.Sub(tNow).Hours() / 24
+				stockMap[msgMap["name"]].(*option).ExpirationDate = tExp
+			}
 		}
-
-		// 	//expiration Date
-
-		// 	option.Name = msgMap["name"]
-		// 	option.Price = price
-		// 	option.StockPrice = stock.Price
-		// 	option.Strike = strike
-		// 	option.Volume = volume
-		// 	option.Vdx = (option.Price / stock.Price) * (120 - option.Expiration) * (option.Strike - stock.Price)
-		// 	option.MinProfit = option.Price / stock.Price
-		// 	option.MaxProfit = (option.Strike + option.Price - stock.Price) / stock.Price
-		// 	stockMap[msgMap["name"]] = option
-
-		// }
+		stockMap[msgMap["name"]].Perform()
 
 	}
 }
@@ -134,36 +204,22 @@ func serveWeb() {
 	e.GET("/", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, stockMap)
 	})
-	e.GET("/exist", func(c echo.Context) error {
-		newMap := make([]string, 0)
-		for _, val := range stockMap {
-			f, _ := strconv.ParseFloat(c.QueryParam("min"), 32)
-			if val.Vdx > f {
-				newMap = append(newMap, val.Name)
-			}
-		}
-		return c.JSON(http.StatusOK, newMap)
-	})
 	e.Logger.Fatal(e.Start(":8099"))
 }
 
 func saveMsgToFile() {
-	for {
-		if len(msgList) > 0 {
-			f, _ := os.OpenFile("api-core/output/out.txt", os.O_APPEND|os.O_WRONLY, 0644)
+	if len(msgList) >= 10 {
+		f, _ := os.OpenFile("api-core/output/out.txt", os.O_APPEND|os.O_WRONLY, 0644)
 
-			allTxt := ""
-			for _, txt := range msgList {
-				allTxt += txt
-			}
-
-			f.WriteString(allTxt)
-
-			f.Close()
-			msgList = make([]string, 0)
+		allTxt := ""
+		for _, txt := range msgList {
+			allTxt += txt
 		}
 
-		time.Sleep(1 * time.Minute)
+		f.WriteString(allTxt)
+
+		f.Close()
+		msgList = make([]string, 0)
 	}
 
 }
