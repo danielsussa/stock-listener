@@ -17,7 +17,6 @@ import (
 
 type stockInfo struct {
 	Price          float64
-	StockPrice     float64
 	Name           string
 	Parent         string
 	MinProfit      float64
@@ -68,6 +67,9 @@ func main() {
 		if len(msgSpl) < 3 || msgSpl[0] == "E" {
 			continue
 		}
+		if msgSpl[0] != "T" {
+			continue
+		}
 
 		fmt.Print("Message from server: " + message)
 		msgList = append(msgList, message)
@@ -83,38 +85,35 @@ func main() {
 			}
 		}
 
-		// //if is a stock
-		// if msgMap["45"] == "1" {
-		// 	if _, ok := msgMap["2"]; !ok {
-		// 		price, _ := strconv.ParseFloat(msgMap["2"], 32)
-		// 		stockMap[msgMap["name"]].Price = price
-		// 	}
-		// }
-		// // If is a option
-		// if msgMap["45"] == "2" {
-		// 	if _, ok := stockMap[msgMap["81"]]; !ok {
-		// 		panic("Cannot continue")
-		// 	}
-		// 	option := &stock{}
-		// 	stock := stockMap[msgMap["81"]]
+		//Setup price
+		if _, ok := msgMap["2"]; ok {
+			price, _ := strconv.ParseFloat(msgMap["2"], 32)
+			stockMap[msgMap["name"]].Price = price
+		}
 
-		// 	//get stock
+		//Setup strike
+		if _, ok := msgMap["121"]; ok {
+			strike, _ := strconv.ParseFloat(msgMap["121"], 32)
+			stockMap[msgMap["name"]].Strike = strike
+		}
 
-		// 	//price
-		// 	price, _ := strconv.ParseFloat(msgMap["2"], 32)
+		//Setup volume
+		if _, ok := msgMap["9"]; ok {
+			vol, _ := strconv.ParseFloat(msgMap["9"], 32)
+			stockMap[msgMap["name"]].Volume = vol
+		}
 
-		// 	//price
-		// 	strike, _ := strconv.ParseFloat(msgMap["121"], 32)
+		//Setup Expiration date
+		if _, ok := msgMap["125"]; ok {
+			tExp, _ := time.Parse("2006-01-02", fmt.Sprintf("%s-%s-%s", msgMap["125"][0:4], msgMap["125"][4:6], msgMap["125"][6:8]))
+			tNow := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.UTC)
 
-		// 	//volume
-		// 	volume, _ := strconv.ParseFloat(msgMap["9"], 32)
+			stockMap[msgMap["name"]].Expiration = tExp.Sub(tNow).Hours() / 24
+			stockMap[msgMap["name"]].ExpirationDate = tExp
+		}
 
 		// 	//expiration Date
-		// 	tExp, _ := time.Parse("2006-01-02", fmt.Sprintf("%s-%s-%s", msgMap["125"][0:4], msgMap["125"][4:6], msgMap["125"][6:8]))
-		// 	tNow := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.UTC)
 
-		// 	option.Expiration = tExp.Sub(tNow).Hours() / 24
-		// 	option.ExpirationDate = tExp
 		// 	option.Name = msgMap["name"]
 		// 	option.Price = price
 		// 	option.StockPrice = stock.Price

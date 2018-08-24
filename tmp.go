@@ -8,6 +8,7 @@ import (
 	"gopkg.in/mailgun/mailgun-go.v1"
 )
 
+//
 func main() {
 	// Create an instance of the Mailgun Client
 	mg := mailgun.NewMailgun(os.Getenv("MAILGUN_DOMAIN"), os.Getenv("MAILGUN_PRIVATE"), os.Getenv("MAILGUN_PUBLIC"))
