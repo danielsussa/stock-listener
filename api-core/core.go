@@ -1,209 +1,29 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net"
-	"net/http"
+	"log"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/jinzhu/copier"
-
-	"github.com/labstack/echo"
+	mailgun "gopkg.in/mailgun/mailgun-go.v1"
 )
 
-type connector interface {
-	connect()
-	getMessage() string
-	sendMessage(string)
-}
-
-type fileConnector struct {
-	idx      int
-	messages []string
-}
-
-func (f *fileConnector) connect() {
-	b, err := ioutil.ReadFile("api-core/output/out.txt") // just pass the file name
-	if err != nil {
-		panic(err)
-	}
-	f.messages = strings.Split(string(b), "\n")
-}
-
-func (f *fileConnector) getMessage() string {
-	time.Sleep(20 * time.Millisecond)
-	msg := f.messages[f.idx]
-	f.idx++
-	return msg
-}
-
-func (f fileConnector) sendMessage(msg string) {
-}
-
-type tcpConnector struct {
-	conn net.Conn
-}
-
-func (t *tcpConnector) connect() {
-	// connect to this socket
-	conn, err := net.Dial("tcp", "datafeeddl1.cedrofinances.com.br:81")
-
-	if err != nil {
-		panic(err)
-	}
-	t.conn = conn
-}
-
-func (t tcpConnector) getMessage() string {
-	message, err := bufio.NewReader(t.conn).ReadString('\n')
-	if err != nil {
-		panic(err)
-	}
-	return message
-}
-
-func (t tcpConnector) sendMessage(msg string) {
-	fmt.Println(msg)
-	fmt.Fprintf(t.conn, fmt.Sprintf("%s\n", msg))
-}
-
-type stockInfo interface {
-	Kind() string
-	SetPrice(string)
-	SetName(string)
-	Perform()
-}
-
-type filter string
-
-const (
-	_MAX_PROFIT filter = "max_profit"
-	_MIN_PROFIT filter = "min_profit"
-)
-
-type snapshot struct {
-	Filter    filter
-	Value     float64
-	StockInfo stockInfo
-}
-
-type option struct {
-	Price          float64
-	Name           string
-	Stock          *stock
-	Strike         float64
-	Expiration     float64
-	Volume         float64
-	ExpirationDate time.Time
-	Updated        time.Time
-}
-
-func (opt option) Kind() string {
-	return "option"
-}
-
-func (opt *option) SetPrice(p string) {
-	price, _ := strconv.ParseFloat(p, 32)
-	opt.Price = price
-}
-
-func (opt *option) IsMarketOpen() bool {
-	if opt.Updated.Hour() >= 10 && opt.Updated.Hour() <= 18 {
-		fmt.Println(opt.Updated)
-		return true
-	}
-	return false
-}
-
-func (opt *option) SetName(p string) {
-	opt.Name = p
-}
-
-var snapshotMap map[string]*snapshot
-
-func (opt *option) Perform() {
-	//Perform VDX
-	if opt.Stock == nil || opt.Stock.Price == 0 {
-		return
-	}
-	//vdx := (opt.Price / opt.Stock.Price) * (120 - opt.Expiration) * (opt.Strike - opt.Stock.Price)
-
-	//minProfit := opt.Price / opt.Stock.Price
-
-	//only perform on open market
-	if !opt.IsMarketOpen() {
-		return
-	}
-
-	// PERFORM MAX PROFIT
-	{
-		f := fmt.Sprintf("%s_%s", opt.Name, _MAX_PROFIT)
-		if _, ok := snapshotMap[f]; !ok {
-			snapshotMap[f] = &snapshot{Filter: _MAX_PROFIT}
-		}
-		maxProfit := (opt.Strike + opt.Price - opt.Stock.Price) / opt.Stock.Price
-		if snapshotMap[f].Value < maxProfit {
-			snapshotMap[f].Value = maxProfit
-			newOpt := &option{}
-			copier.Copy(newOpt, opt)
-			snapshotMap[f].StockInfo = newOpt
-		}
-	}
-
-	// PERFORM MIN PROFIT
-	{
-		f := fmt.Sprintf("%s_%s", opt.Name, _MIN_PROFIT)
-		if _, ok := snapshotMap[f]; !ok {
-			snapshotMap[f] = &snapshot{Filter: _MIN_PROFIT}
-		}
-		minProfit := opt.Price / opt.Stock.Price
-		if snapshotMap[f].Value < minProfit {
-			snapshotMap[f].Value = minProfit
-			newOpt := &option{}
-			copier.Copy(newOpt, opt)
-			snapshotMap[f].StockInfo = newOpt
-		}
-	}
-}
-
-type stock struct {
-	Price  float64
-	Name   string
-	Volume float64
-}
-
-func (st stock) Kind() string {
-	return "stock"
-}
-
-func (st *stock) SetPrice(p string) {
-	price, _ := strconv.ParseFloat(p, 32)
-	st.Price = price
-}
-
-func (st *stock) SetMarketStatus(p string) {
-}
-
-func (st *stock) SetName(p string) {
-	st.Name = p
-}
-
-func (st *stock) Perform() {
-}
-
+var mg mailgun.Mailgun
 var stockMap map[string]stockInfo
 var msgList []string
 
 func main() {
 	stocks, options := convertFile()
 
-	snapshotMap = make(map[string]*snapshot)
+	snapshotMap = make(map[string]map[filter]*snapshot)
+
+	mg = mailgun.NewMailgun(os.Getenv("MAILGUN_DOMAIN"), os.Getenv("MAILGUN_PRIVATE"), os.Getenv("MAILGUN_PUBLIC"))
+
 	//Add to stockMap
 	stockMap = make(map[string]stockInfo)
 	for _, st := range stocks {
@@ -228,7 +48,6 @@ func main() {
 	c.sendMessage("102030")
 
 	go sendAllMessages(c, stocks, options)
-	go serveWeb()
 
 	for {
 		// listen for reply
@@ -264,9 +83,14 @@ func main() {
 
 		//Setup price
 		if _, ok := msgMap["2"]; ok {
-			stockMap[msgMap["name"]].SetPrice(msgMap["2"])
+			stockMap[msgMap["name"]].SetPrice(msgMap["2"], _LAST_PRICE)
 		}
-
+		if _, ok := msgMap["3"]; ok {
+			stockMap[msgMap["name"]].SetPrice(msgMap["3"], _BEST_BUY_OFFER)
+		}
+		if _, ok := msgMap["4"]; ok {
+			stockMap[msgMap["name"]].SetPrice(msgMap["4"], _BEST_SELL_OFFER)
+		}
 		//Setup Market Status
 		// if _, ok := msgMap["84"]; ok {
 		// 	stockMap[msgMap["name"]].SetMarketStatus(msgMap["84"])
@@ -320,22 +144,10 @@ func main() {
 		}
 		stockMap[msgMap["name"]].Perform()
 
-	}
-}
+		fmt.Printf("\r")
+		fmt.Printf("On %d/10", 12)
 
-func serveWeb() {
-	e := echo.New()
-	e.GET("/", func(c echo.Context) error {
-		_, err := json.Marshal(stockMap)
-		if err != nil {
-			panic(err)
-		}
-		return c.JSON(http.StatusOK, map[string]interface{}{
-			"stockMap": stockMap,
-			"snapshot": snapshotMap,
-		})
-	})
-	e.Logger.Fatal(e.Start(":8099"))
+	}
 }
 
 func saveMsgToFile() {
@@ -413,4 +225,15 @@ func sendAllMessages(c connector, stocks []string, options []string) {
 	}
 
 	fmt.Println("FINISHED")
+}
+
+func sendMessage(body string) {
+	message := mg.NewMessage("danielsussa@gmail.com", "Stock", body, "danielsussa@gmail.com")
+	resp, id, err := mg.Send(message)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("ID: %s Resp: %s\n", id, resp)
 }
