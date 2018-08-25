@@ -15,6 +15,62 @@ import (
 	"github.com/labstack/echo"
 )
 
+type connector interface {
+	connect()
+	getMessage() string
+	sendMessage(string)
+}
+
+type fileConnector struct {
+	idx      int
+	messages []string
+}
+
+func (f *fileConnector) connect() {
+	b, err := ioutil.ReadFile("api-core/output/out.txt") // just pass the file name
+	if err != nil {
+		panic(err)
+	}
+	f.messages = strings.Split(string(b), "\n")
+}
+
+func (f *fileConnector) getMessage() string {
+	time.Sleep(200 * time.Millisecond)
+	msg := f.messages[f.idx]
+	f.idx++
+	return msg
+}
+
+func (f fileConnector) sendMessage(msg string) {
+}
+
+type tcpConnector struct {
+	conn net.Conn
+}
+
+func (t *tcpConnector) connect() {
+	// connect to this socket
+	conn, err := net.Dial("tcp", "datafeeddl1.cedrofinances.com.br:81")
+
+	if err != nil {
+		panic(err)
+	}
+	t.conn = conn
+}
+
+func (t tcpConnector) getMessage() string {
+	message, err := bufio.NewReader(t.conn).ReadString('\n')
+	if err != nil {
+		panic(err)
+	}
+	return message
+}
+
+func (t tcpConnector) sendMessage(msg string) {
+	fmt.Println(msg)
+	fmt.Fprintf(t.conn, fmt.Sprintf("%s\n", msg))
+}
+
 type stockInfo interface {
 	Kind() string
 	SetPrice(string)
@@ -59,7 +115,7 @@ func (opt *option) SetName(p string) {
 
 func (opt *option) Perform() {
 	//Perform VDX
-	if opt.Stock == nil {
+	if opt.Stock == nil || opt.Stock.Price == 0 {
 		return
 	}
 	opt.Vdx = (opt.Price / opt.Stock.Price) * (120 - opt.Expiration) * (opt.Strike - opt.Stock.Price)
@@ -111,27 +167,29 @@ func main() {
 		stockMap[strings.ToUpper(opt)] = &option{}
 	}
 
-	// connect to this socket
-	conn, err := net.Dial("tcp", "datafeeddl1.cedrofinances.com.br:81")
+	var c connector
 
-	if err != nil {
-		panic(err)
+	c = &fileConnector{}
+	if os.Getenv("CONNECTOR_KIND") == "tcp" {
+		c = &tcpConnector{}
 	}
 
-	// send to socket
-	fmt.Fprintf(conn, "\n")
-	fmt.Fprintf(conn, "kanczuk\n")
-	fmt.Fprintf(conn, "102030\n")
+	c.connect()
 
-	go sendAllMessages(&conn, stocks, options)
+	// send to socket
+	c.sendMessage("")
+	c.sendMessage("kanczuk")
+	c.sendMessage("102030")
+
+	go sendAllMessages(c, stocks, options)
 	go serveWeb()
 
 	for {
 		// listen for reply
-		message, _ := bufio.NewReader(conn).ReadString('\n')
+		message := c.getMessage()
 
 		msgSpl := strings.Split(message, ":")
-		saveMsgToFile()
+		//saveMsgToFile()
 
 		if len(msgSpl) < 3 || msgSpl[0] == "E" {
 			continue
@@ -140,7 +198,7 @@ func main() {
 			continue
 		}
 
-		fmt.Print("Message from server: " + message)
+		//fmt.Print("Message from server: " + message)
 		msgList = append(msgList, message)
 
 		msgMap := transformMsgIntoMap(msgSpl)
@@ -202,13 +260,17 @@ func main() {
 func serveWeb() {
 	e := echo.New()
 	e.GET("/", func(c echo.Context) error {
+		_, err := json.Marshal(stockMap)
+		if err != nil {
+			panic(err)
+		}
 		return c.JSON(http.StatusOK, stockMap)
 	})
 	e.Logger.Fatal(e.Start(":8099"))
 }
 
 func saveMsgToFile() {
-	if len(msgList) >= 10 {
+	if len(msgList) >= 30 {
 		f, _ := os.OpenFile("api-core/output/out.txt", os.O_APPEND|os.O_WRONLY, 0644)
 
 		allTxt := ""
@@ -264,11 +326,10 @@ func convertFile() (stocks []string, options []string) {
 	return
 }
 
-func sendAllMessages(conn *net.Conn, stocks []string, options []string) {
+func sendAllMessages(c connector, stocks []string, options []string) {
 	for _, stock := range stocks {
 		stock = strings.ToLower(stock)
-		fmt.Println(fmt.Sprintf("sqt %s\n", stock))
-		fmt.Fprintf(*conn, fmt.Sprintf("sqt %s\n", stock))
+		c.sendMessage(fmt.Sprintf("sqt %s\n", stock))
 		time.Sleep(200 * time.Millisecond)
 	}
 
@@ -276,8 +337,8 @@ func sendAllMessages(conn *net.Conn, stocks []string, options []string) {
 
 	for _, option := range options {
 		option = strings.ToLower(option)
-		fmt.Println(fmt.Sprintf("sqt %s\n", option))
-		fmt.Fprintf(*conn, fmt.Sprintf("sqt %s\n", option))
+		//fmt.Println(fmt.Sprintf("sqt %s\n", option))
+		c.sendMessage(fmt.Sprintf("sqt %s\n", option))
 		time.Sleep(500 * time.Millisecond)
 	}
 
