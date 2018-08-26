@@ -1,12 +1,12 @@
-package main
+package read_page
 
 import (
 	"encoding/xml"
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/go-resty/resty"
 )
 
@@ -18,6 +18,7 @@ type Tr struct {
 }
 
 type tg struct {
+	Url     string `xml:"url,attr"`
 	Content string `xml:"a"`
 }
 
@@ -31,21 +32,9 @@ type XMLTable struct {
 	Tr      []Tr     `xml:"tr"`
 }
 
-type option struct {
-	Kind   string // Call or Put
-	Style  string //American or European
-	IPrice float64
-	Url    string
-	EPrice float64
-	Price  float64
-	Strike float64
-	Stock  stock
-}
-
-func main() {
-
+func ReadMainPage(url string) map[string]option {
 	// Step 1 Main call to get main HTML
-	res, _ := resty.R().Get("https://br.advfn.com/bolsa-de-valores/bovespa/petrobras-PETR4/opcoes")
+	res, _ := resty.R().Get(url)
 
 	s := string(res.Body())
 
@@ -54,41 +43,7 @@ func main() {
 
 	//Step 3: Get all stocks
 	options := getOptions(s, stock)
-
-	// Step 4 Iterate over options
-
-	for k, opt := range options {
-		time.Sleep(2 * time.Second)
-		fmt.Println(fmt.Sprintf("%s -> get detail from %s", time.Now(), k))
-		getOptionDetail(&opt)
-		if opt.Price == 0 {
-			fmt.Println(fmt.Sprintf("%s -> cannot setup option %s", time.Now(), k))
-		}
-	}
-
-	//spew.Dump(options)
-
-}
-
-type stock struct {
-	Price float64
-}
-
-func getOptionDetail(opt *option) {
-	res, _ := resty.R().Get(opt.Url)
-	s := string(res.Body())
-
-	spl := strings.Split(s, "quoteElementPiece")
-	for _, v := range spl {
-		if len(v) == 0 {
-			continue
-		}
-		if string(v[0]) == "10" {
-			pStr := v[strings.Index(v, ">")+1 : strings.Index(v, "<")]
-			price, _ := strconv.ParseFloat(pStr, 32)
-			opt.Price = price
-		}
-	}
+	return options
 }
 
 func getStock(s string) stock {
@@ -129,7 +84,10 @@ func getOptions(s string, stk stock) map[string]option {
 		s = ""
 		for _, v := range spl {
 			if strings.Contains(v, "href") {
-				s += "<tg " + v[4:len(v)] + "</tg>"
+				url := strings.Split(v, "href=")[1]
+				url = strings.Split(url[1:], "\"")[0]
+				url = "\"" + url + "\""
+				s += "<tg " + "url=" + url + " " + v[4:len(v)] + "</tg>"
 			} else if strings.Contains(v, "img") {
 				kind := ""
 				if strings.Contains(v, "E.gif") {
@@ -145,8 +103,7 @@ func getOptions(s string, stk stock) map[string]option {
 		}
 	}
 
-	//fmt.Println(s)
-
+	spew.Dump(s)
 	table := XMLTable{}
 
 	err := xml.Unmarshal([]byte(s), &table)
@@ -161,6 +118,7 @@ func getOptions(s string, stk stock) map[string]option {
 		strike, _ := strconv.ParseFloat(strings.Replace(v.Td[1], ",", ".", -1), 32)
 		optMap[v.Tg.Content] = option{
 			Style:  v.Timg.Kind,
+			Url:    v.Tg.Url,
 			Kind:   v.Td[2],
 			Strike: strike,
 			Stock:  stk,

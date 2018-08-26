@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -14,7 +15,10 @@ import (
 )
 
 var mg mailgun.Mailgun
-var stockMap map[string]stockInfo
+
+type stockInfoMap map[string]stockInfo
+
+var stockMap stockInfoMap
 var msgList []string
 
 func main() {
@@ -144,8 +148,38 @@ func main() {
 		}
 		stockMap[msgMap["name"]].Perform()
 
-		fmt.Printf("\r")
-		fmt.Printf("On %d/10", 12)
+		fmt.Println("\033[2J")
+		fmt.Printf("\n\033[0;0H")
+		var keys []string
+		for k := range stockMap {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			if stockMap[k].Kind() == (option{}).Kind() {
+				opt := stockMap[k].(*option)
+				if opt.Stock == nil {
+					break
+				}
+				if len(k) < 8 {
+					k += "_"
+				}
+				minProfit := opt.BestBuyOffer / opt.Stock.BestSellOffer * 100
+				if opt.BestBuyOffer > 0 && opt.Price > 0 {
+					h, m, s := opt.Updated.Clock()
+					fmt.Printf("[%s] -> B: %.2f | P: %.2f | A: %.2f | STR: %.2f | [%s] | P: %.2f | PROFIT: %.2f - %d:%d:%d \n",
+						k,
+						opt.BestBuyOffer,
+						opt.Price,
+						opt.BestSellOffer,
+						opt.Strike,
+						opt.Stock.Name,
+						opt.Stock.Price,
+						minProfit,
+						h, m, s)
+				}
+			}
+		}
 
 	}
 }
