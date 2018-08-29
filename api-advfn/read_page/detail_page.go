@@ -30,6 +30,13 @@ func getOptionDetail(s string, opt *option) {
 				price, _ := strconv.ParseFloat(pStr, 32)
 				opt.Price = price
 			}
+			if string(v[0:2]) == "14" {
+				pStr := v[strings.Index(v, ">")+1 : strings.Index(v, "<")]
+				pStr = strings.Replace(pStr, ",", ".", -1)
+				pStr = strings.Replace(pStr, "&nbsp;", "", -1)
+				price, _ := strconv.ParseFloat(pStr, 32)
+				opt.AvgPrice = price
+			}
 		}
 	}
 
@@ -38,7 +45,7 @@ func getOptionDetail(s string, opt *option) {
 		spl := strings.Split(s, "dias</td>")
 		txt := spl[0][len(spl[0])-5:]
 		txt = strings.TrimSpace(strings.Split(txt, ">")[1])
-		expDate, _ := strconv.Atoi(txt)
+		expDate, _ := strconv.ParseFloat(txt, 32)
 		opt.Expiration = expDate
 	}
 }

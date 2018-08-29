@@ -2,9 +2,6 @@ package main
 
 import (
 	"fmt"
-	"time"
-
-	"github.com/davecgh/go-spew/spew"
 
 	"github.com/danielsussa/stock-listener/api-advfn/read_page"
 )
@@ -19,10 +16,18 @@ func main() {
 		//time.Sleep(200 * time.Millisecond)
 		read_page.ReadDetailPage(&opt)
 		if opt.Price == 0 {
-			fmt.Println(fmt.Sprintf("%s -> cannot setup option %s", time.Now(), k))
+			//fmt.Println(fmt.Sprintf("%s -> cannot setup option %s", time.Now(), k))
 		} else {
-			fmt.Println(fmt.Sprintf("%s -> get detail from %s", time.Now(), k))
-			spew.Dump(opt)
+			//fmt.Println(fmt.Sprintf("%s -> get detail from %s", time.Now(), k))
+			min := opt.MinProfitPerMonth()
+			max := opt.MaxProfitPerMonth()
+			if min < max && min > 3 && opt.Expiration < 120 {
+				fmt.Println(fmt.Sprintf("%8s (%5.2f)-> (profit: %5.2f <min|max> %6.2f | spr: %5.2f) - Price: %.2f | Stk.Price: %5.2f | Exp: %3.0f => Kind: %s | Style: %s",
+					k, opt.Strike, min, max, (opt.Stock.Price - opt.Price),
+					opt.Price, opt.Stock.Price, opt.Expiration,
+					opt.Kind, opt.Style,
+				))
+			}
 		}
 	}
 

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/davecgh/go-spew/spew"
+
 	"github.com/go-resty/resty"
 )
 
@@ -41,6 +42,8 @@ func ReadMainPage(url string) map[string]option {
 	// Step 2 Get STOCK
 	stock := getStock(s)
 
+	spew.Dump(stock)
+
 	//Step 3: Get all stocks
 	options := getOptions(s, stock)
 	return options
@@ -50,8 +53,10 @@ func getStock(s string) stock {
 	stk := stock{}
 	spl := strings.Split(s, "quoteElementPiece")
 	for _, v := range spl {
-		if string(v[0]) == "10" {
+		if string(v[0:2]) == "10" {
 			pStr := v[strings.Index(v, ">")+1 : strings.Index(v, "<")]
+			pStr = strings.TrimSpace(pStr)
+			pStr = strings.Replace(pStr, ",", ".", -1)
 			price, _ := strconv.ParseFloat(pStr, 32)
 			stk.Price = price
 		}
@@ -91,10 +96,10 @@ func getOptions(s string, stk stock) map[string]option {
 			} else if strings.Contains(v, "img") {
 				kind := ""
 				if strings.Contains(v, "E.gif") {
-					kind = "kind=\"european\""
+					kind = "kind=\"E\""
 				}
 				if strings.Contains(v, "A.gif") {
-					kind = "kind=\"american\""
+					kind = "kind=\"A\""
 				}
 				s += "<timg " + kind + " " + v[4:len(v)] + "</timg>"
 			} else {
@@ -103,7 +108,6 @@ func getOptions(s string, stk stock) map[string]option {
 		}
 	}
 
-	spew.Dump(s)
 	table := XMLTable{}
 
 	err := xml.Unmarshal([]byte(s), &table)
