@@ -3,18 +3,25 @@ package read_page
 import "math"
 
 type stock struct {
-	Price float64
+	Price float64 `csv:"stock_price"`
 }
 
 type option struct {
+	Name       string `csv:"name"`
 	Kind       string // Call or Put
 	Style      string //American or European
 	Expiration float64
-	Url        string
+	Url        string `csv:"-"`
 	Price      float64
 	AvgPrice   float64
 	Strike     float64
+	QtdNegs    float64
+	VolNegs    float64
 	Stock      stock
+}
+
+func NewOptions() []option {
+	return []option{}
 }
 
 func (opt option) MinProfitPerMonth() float64 {

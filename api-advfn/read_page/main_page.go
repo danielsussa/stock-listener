@@ -11,7 +11,7 @@ import (
 	"github.com/go-resty/resty"
 )
 
-type Tr struct {
+type TrTmp struct {
 	Class string   `xml:"class,attr"`
 	Td    []string `xml:"td"`
 	Tg    tg       `xml:"tg"`
@@ -30,7 +30,7 @@ type timg struct {
 type XMLTable struct {
 	Class   string   `xml:"class,attr"`
 	XMLName xml.Name `xml:"table"`
-	Tr      []Tr     `xml:"tr"`
+	Tr      []TrTmp  `xml:"tr"`
 }
 
 func ReadMainPage(url string) map[string]option {
