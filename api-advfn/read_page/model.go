@@ -24,14 +24,20 @@ func NewOptions() []option {
 	return []option{}
 }
 
-func (opt option) MinProfitPerMonth() float64 {
+func (opt option) MinProfit(perMonth bool) float64 {
 	d := opt.Expiration / 30.0
+	if !perMonth {
+		d = 1
+	}
 	p := opt.Price / opt.Stock.Price / d * 100
 	return math.Floor(p*100) / 100
 }
 
-func (opt option) MaxProfitPerMonth() float64 {
+func (opt option) MaxProfit(perMonth bool) float64 {
 	d := opt.Expiration / 30.0
+	if !perMonth {
+		d = 1
+	}
 
 	if opt.Kind == "C" {
 		p := (opt.Price + opt.Strike - opt.Stock.Price) / opt.Stock.Price / d * 100

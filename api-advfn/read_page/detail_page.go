@@ -24,6 +24,7 @@ func getOptionDetail(s string, opt *option) {
 	s = strings.Replace(s, ",", ".", -1)
 	s = strings.Replace(s, "\n", "", -1)
 	s = strings.Replace(s, "\t", "", -1)
+	s = strings.Replace(s, "&nbsp", "", -1)
 
 	tables := strings.Split(s, "<table>")
 	tables = tables[1 : len(tables)-1]
@@ -37,19 +38,19 @@ func getOptionDetail(s string, opt *option) {
 			if strings.Contains(th, "Código da Opção") {
 				mapHeader[i] = "code_opcao"
 			}
-			if strings.Contains(th, "Preço de Exercício") {
+			if strings.Contains(th, "Preço de Exercício") || strings.Contains(th, "Strike Price") {
 				mapHeader[i] = "strike"
 			}
-			if strings.Contains(th, "Último Preço") {
+			if strings.Contains(th, "Último Preço") || strings.Contains(th, "Option Price") {
 				mapHeader[i] = "last_price"
 			}
-			if strings.Contains(th, "Dias até Vencimento") {
+			if strings.Contains(th, "Dias até Vencimento") || strings.Contains(th, "Days To Expiry") {
 				mapHeader[i] = "exp_days"
 			}
-			if strings.Contains(th, "Tipo de Negócio") {
+			if strings.Contains(th, "Tipo de Negócio") || strings.Contains(th, "Type") {
 				mapHeader[i] = "kind"
 			}
-			if strings.Contains(th, "Estilo de Opção") {
+			if strings.Contains(th, "Estilo de Opção") || strings.Contains(th, "Style") {
 				mapHeader[i] = "style"
 			}
 			if strings.Contains(th, "Número de Negócios") {
@@ -84,6 +85,7 @@ func getOptionDetail(s string, opt *option) {
 			}
 			if mapHeader[i] == "exp_days" {
 				val = strings.Replace(val, " dias", "", -1)
+				val = strings.Replace(val, " days", "", -1)
 				days, err := strconv.ParseFloat(val, 32)
 				if err != nil {
 					panic(err)

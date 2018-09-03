@@ -6,8 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
-
 	"github.com/go-resty/resty"
 )
 
@@ -42,8 +40,6 @@ func ReadMainPage(url string) map[string]option {
 	// Step 2 Get STOCK
 	stock := getStock(s)
 
-	spew.Dump(stock)
-
 	//Step 3: Get all stocks
 	options := getOptions(s, stock)
 	return options
@@ -53,7 +49,7 @@ func getStock(s string) stock {
 	stk := stock{}
 	spl := strings.Split(s, "quoteElementPiece")
 	for _, v := range spl {
-		if string(v[0:2]) == "10" {
+		if string(v[0:1]) == "6" {
 			pStr := v[strings.Index(v, ">")+1 : strings.Index(v, "<")]
 			pStr = strings.TrimSpace(pStr)
 			pStr = strings.Replace(pStr, ",", ".", -1)
