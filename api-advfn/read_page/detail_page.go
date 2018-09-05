@@ -53,7 +53,7 @@ func getOptionDetail(s string, opt *option) {
 			if strings.Contains(th, "Estilo de Opção") || strings.Contains(th, "Style") {
 				mapHeader[i] = "style"
 			}
-			if strings.Contains(th, "Número de Negócios") {
+			if strings.Contains(th, "Número de Negócios") || strings.Contains(th, "Quantidade de Ações Negociadas") {
 				mapHeader[i] = "qtd_neg"
 			}
 			if strings.Contains(th, "Volume de Ações Negociadas") {
@@ -109,10 +109,7 @@ func getOptionDetail(s string, opt *option) {
 				}
 			}
 			if mapHeader[i] == "qtd_neg" {
-				v, err := strconv.ParseFloat(val, 32)
-				if err != nil {
-					panic(err)
-				}
+				v, _ := strconv.ParseFloat(val, 32)
 				opt.QtdNegs = v
 			}
 			if mapHeader[i] == "vol_neg" {

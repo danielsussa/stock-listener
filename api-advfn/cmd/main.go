@@ -35,9 +35,10 @@ func main() {
 
 				if min > 4 && max > 0 && opt.Expiration < 120 && opt.Kind == "C" && opt.Price > 1 {
 					optsSlc = append(optsSlc, opt)
-					fmt.Println(fmt.Sprintf("%8s (%5.2f)-> (profit: %5.2f <min|max> %6.2f | spr: %5.2f) - Price: %.2f | Stk.Price: %5.2f | Exp: %3.0f => Kind: %s | Style: %s",
-						k, opt.Strike, min, max, (opt.Stock.Price - opt.Price),
-						opt.Price, opt.Stock.Price, opt.Expiration,
+					fmt.Println(fmt.Sprintf("%8s (%5.2f)-> (profit: %5.2f <min|max> %6.2f |  %5.2f <spr|bre> %5.2f) - Price: %5.2f | Stk.Price: %5.2f | Vol: %5.0f | Exp: %3.0f => Kind: %s | Style: %s",
+						k, opt.Strike, min, max,
+						(opt.Stock.Price - opt.Price), (opt.Price + opt.Strike), //spread and break even
+						opt.Price, opt.Stock.Price, opt.VolNegs, opt.Expiration,
 						opt.Kind, opt.Style,
 					))
 				}
