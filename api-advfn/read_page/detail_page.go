@@ -53,7 +53,7 @@ func getOptionDetail(s string, opt *option) {
 			if strings.Contains(th, "Estilo de Opção") || strings.Contains(th, "Style") {
 				mapHeader[i] = "style"
 			}
-			if strings.Contains(th, "Número de Negócios") || strings.Contains(th, "Quantidade de Ações Negociadas") {
+			if strings.Contains(th, "Número de Negócios") || strings.Contains(th, "Quantidade de Ações Negociadas") || strings.Contains(th, "Quantity") {
 				mapHeader[i] = "qtd_neg"
 			}
 			if strings.Contains(th, "Volume de Ações Negociadas") {

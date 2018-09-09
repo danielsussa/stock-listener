@@ -1,6 +1,8 @@
 package read_page
 
-import "math"
+import (
+	"math"
+)
 
 type stock struct {
 	Price float64 `csv:"stock_price"`
@@ -24,16 +26,26 @@ func NewOptions() []option {
 	return []option{}
 }
 
-func (opt option) MinProfit(perMonth bool) float64 {
-	d := opt.Expiration / 30.0
-	if !perMonth {
-		d = 1
+func (opt option) Modality() string {
+	//ex: strike 19 and stock 20
+	if opt.Strike < opt.Stock.Price {
+		return "I"
 	}
-	p := opt.Price / opt.Stock.Price / d * 100
-	return math.Floor(p*100) / 100
+	//ex: strike 19.19 and stock 20
+	if opt.Strike-(opt.Strike*0.05) > opt.Stock.Price && opt.Strike+(opt.Strike*0.05) < opt.Stock.Price {
+		return "A"
+	}
+	return "O"
 }
 
-func (opt option) MaxProfit(perMonth bool) float64 {
+func (opt option) Protection() float64 {
+	if opt.Stock.Price-opt.Price < opt.Strike {
+		return opt.Price / opt.Strike * 100
+	}
+	return (opt.Stock.Price - opt.Strike) / opt.Stock.Price * 100
+}
+
+func (opt option) Profit(perMonth bool) float64 {
 	d := opt.Expiration / 30.0
 	if !perMonth {
 		d = 1
