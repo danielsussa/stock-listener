@@ -1,9 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/danielsussa/stock-listener/api-advfn/read_page"
 	"github.com/gocarina/gocsv"
@@ -24,26 +25,15 @@ func main() {
 
 		// Step 4 Iterate over options
 
+		var wg sync.WaitGroup
+		wg.Add(len(options))
 		for k, opt := range options {
-			//time.Sleep(200 * time.Millisecond)
-			read_page.ReadDetailPage(&opt)
 			opt.Name = k
-			if opt.Price != 0 {
-				//fmt.Println(fmt.Sprintf("%s -> cannot setup option %s", time.Now(), k))
-				profit := opt.Profit(true)
-				protection := opt.Protection()
-
-				if profit > 4 && opt.Expiration < 120 && opt.Kind == "C" && opt.Price > 1 && opt.Style == "A" {
-					optsSlc = append(optsSlc, opt)
-					fmt.Println(fmt.Sprintf("%8s (%5.2f)-> ( %5.2f <prof(%s)marg> %6.2f |  spr: %5.2f | Price: %5.2f | Stk.Price: %5.2f | Vol: %5.0f | Exp: %3.0f => Kind: %s | Style: %s",
-						k, opt.Strike, profit, opt.Modality(), protection,
-						(opt.Stock.Price - opt.Price), //spread
-						opt.Price, opt.Stock.Price, opt.QtdNegs, opt.Expiration,
-						opt.Kind, opt.Style,
-					))
-				}
-			}
+			go opt.ReadAndPrint()
+			time.Sleep(50 * time.Millisecond)
+			wg.Done()
 		}
+		wg.Wait()
 	}
 
 	gocsv.TagSeparator = ";"

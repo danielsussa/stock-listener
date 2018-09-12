@@ -1,6 +1,7 @@
 package read_page
 
 import (
+	"fmt"
 	"math"
 )
 
@@ -24,6 +25,24 @@ type option struct {
 
 func NewOptions() []option {
 	return []option{}
+}
+
+func (opt option) ReadAndPrint() {
+	ReadDetailPage(&opt)
+	if opt.Price != 0 {
+		//fmt.Println(fmt.Sprintf("%s -> cannot setup option %s", time.Now(), k))
+		profit := opt.Profit(true)
+		protection := opt.Protection()
+
+		if profit > 4 && opt.Expiration < 120 && opt.Kind == "C" && opt.Price > 1 && opt.Style == "A" && opt.QtdNegs > 20 && protection > 8 && opt.Expiration < 50 {
+			fmt.Println(fmt.Sprintf("%8s (%5.2f)-> ( %5.2f <prof(%s)marg> %6.2f |  spr: %5.2f | Price: %5.2f | Stk.Price: %5.2f | Vol: %5.0f | Exp: %3.0f => Kind: %s | Style: %s",
+				opt.Name, opt.Strike, profit, opt.Modality(), protection,
+				(opt.Stock.Price - opt.Price), //spread
+				opt.Price, opt.Stock.Price, opt.QtdNegs, opt.Expiration,
+				opt.Kind, opt.Style,
+			))
+		}
+	}
 }
 
 func (opt option) Modality() string {
