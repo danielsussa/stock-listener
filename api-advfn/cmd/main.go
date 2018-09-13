@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"strings"
 	"sync"
@@ -14,6 +15,9 @@ func getAllURLS() []string {
 	return []string{
 		"https://br.advfn.com/bolsa-de-valores/bovespa/petrobras-PETR4/opcoes",
 		"https://br.advfn.com/bolsa-de-valores/bovespa/kroton-KROT3/opcoes",
+		"https://br.advfn.com/bolsa-de-valores/bovespa/vale-VALE3/opcoes",
+		"https://br.advfn.com/bolsa-de-valores/bovespa/ambev-ABEV3/opcoes",
+		"https://br.advfn.com/bolsa-de-valores/bovespa/itau-unibanco-ITUB4/opcoes",
 	}
 }
 
@@ -34,6 +38,7 @@ func main() {
 			wg.Done()
 		}
 		wg.Wait()
+		fmt.Println("-----------------||-----------------")
 	}
 
 	gocsv.TagSeparator = ";"
