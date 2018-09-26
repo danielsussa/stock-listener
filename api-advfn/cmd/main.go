@@ -18,6 +18,7 @@ func getAllURLS() []string {
 		"https://br.advfn.com/bolsa-de-valores/bovespa/vale-VALE3/opcoes",
 		"https://br.advfn.com/bolsa-de-valores/bovespa/ambev-ABEV3/opcoes",
 		"https://br.advfn.com/bolsa-de-valores/bovespa/itau-unibanco-ITUB4/opcoes",
+		"https://br.advfn.com/bolsa-de-valores/bovespa/banco-do-brasil-BBAS3/opcoes",
 	}
 }
 
@@ -38,7 +39,7 @@ func main() {
 			wg.Done()
 		}
 		wg.Wait()
-		fmt.Println("-----------------||-----------------")
+		fmt.Println("---------------------------||---------------------------")
 	}
 
 	gocsv.TagSeparator = ";"
