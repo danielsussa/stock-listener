@@ -69,7 +69,7 @@ func getOptionDetail(s string, opt *option) {
 			if mapHeader[i] == "strike" {
 				price, err := strconv.ParseFloat(val, 32)
 				if err != nil {
-					panic(err)
+					continue
 				}
 				opt.Strike = price
 			}

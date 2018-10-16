@@ -33,7 +33,7 @@ func (opt option) ReadAndPrint() {
 		profit := opt.Profit(true)
 		protection := opt.Protection()
 
-		if profit > 3 && opt.Expiration < 100 && opt.Kind == "C" && opt.VolNegs > 1000 && protection > 8 {
+		if profit > 3 && opt.Expiration < 100 && opt.Kind == "C" && opt.VolNegs > 0 && protection > 8 {
 			fmt.Println(fmt.Sprintf("%8s (%5.2f)-> ( %5.2f <prof(%s)marg> %6.2f |  spr: %5.2f | Price: %5.2f | Stk.Price: %5.2f | Vol: %7.0f | Exp: %3.0f => Kind: %s | Style: %s",
 				opt.Name, opt.Strike, profit, opt.Modality(), protection,
 				(opt.Stock.Price - opt.Price), //spread

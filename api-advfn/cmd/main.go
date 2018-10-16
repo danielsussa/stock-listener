@@ -35,7 +35,7 @@ func main() {
 		for k, opt := range options {
 			opt.Name = k
 			go opt.ReadAndPrint()
-			time.Sleep(50 * time.Millisecond)
+			time.Sleep(200 * time.Millisecond)
 			wg.Done()
 		}
 		wg.Wait()
