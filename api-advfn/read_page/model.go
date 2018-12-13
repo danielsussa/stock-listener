@@ -33,12 +33,19 @@ func (opt option) ReadAndPrint() {
 		profit := opt.Profit(true)
 		protection := opt.Protection()
 
-		if profit > 3 && opt.Expiration < 100 && opt.Kind == "C" && opt.VolNegs > 0 && protection > 8 {
-			fmt.Println(fmt.Sprintf("%8s (%5.2f)-> ( %5.2f <prof(%s)marg> %6.2f |  spr: %5.2f | Price: %5.2f | Stk.Price: %5.2f | Vol: %7.0f | Exp: %3.0f => Kind: %s | Style: %s",
-				opt.Name, opt.Strike, profit, opt.Modality(), protection,
+		if profit > 2 && opt.Expiration < 100 && opt.Kind == "C" && opt.VolNegs > 0 && protection > 5 {
+			fmt.Println(fmt.Sprintf("VC | %8s (%5.2f)-> ( %5.2f <prof(%s - %6.2f)marg> %6.2f |  spr: %5.2f | Price: %5.2f | Stk.Price: %5.2f | Vol: %7.0f | Exp: %3.0f => Kind: %s | Style: %s",
+				opt.Name, opt.Strike, profit, opt.Modality(), (profit + protection), protection,
 				(opt.Stock.Price - opt.Price), //spread
 				opt.Price, opt.Stock.Price, opt.VolNegs, opt.Expiration,
 				opt.Kind, opt.Style,
+			))
+		}
+
+		if opt.Kind == "P" && opt.Price < 0.2 && opt.VolNegs > 0 {
+			fmt.Println(fmt.Sprintf("PU | %8s (%5.2f)-> Price: %5.2f | Stk.Price: %5.2f | Vol: %7.0f | Exp: %3.0f => Prof per Price: %5.4f",
+				opt.Name, opt.Strike, opt.Price, opt.Stock.Price, opt.VolNegs, opt.Expiration,
+				(opt.Price/(opt.Stock.Price-opt.Strike))*100,
 			))
 		}
 		// if opt.Price < 0.3 && opt.Expiration < 100 && opt.Kind == "P" && opt.VolNegs > 0 {

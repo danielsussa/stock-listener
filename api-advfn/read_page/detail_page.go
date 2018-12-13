@@ -27,6 +27,11 @@ func getOptionDetail(s string, opt *option) {
 	s = strings.Replace(s, "&nbsp", "", -1)
 
 	tables := strings.Split(s, "<table>")
+
+	if len(tables) < 2 {
+		return
+	}
+
 	tables = tables[1 : len(tables)-1]
 
 	for _, table := range tables {
